@@ -6,6 +6,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from stellaris_save_extractor.base import SaveExtractorBase
 from stellaris_save_extractor.player import PlayerMixin
 
 
@@ -227,3 +228,72 @@ def test_get_naval_capacity_includes_modeled_job_and_starbase_bonuses():
         == 0.1
     )
     assert analysis["breakdown"]["multiplier_additions"]["Edict (grand_fleet)"] == 0.2
+
+
+class IdentityExtractor(PlayerMixin):
+    """Minimal test double for empire identity extraction."""
+
+    def __init__(self, country):
+        self._country = country
+
+    def get_player_empire_id(self) -> int:
+        return 0
+
+    def _get_player_country_entry(self, player_id: int):
+        assert player_id == 0
+        return self._country
+
+    def get_player_empire_name(self) -> str:
+        return "Test Empire"
+
+    def _get_species_names(self):
+        return {}
+
+
+def test_empire_identity_reads_ethics_as_stellaris_4_5_4_writes_them():
+    """4.5.4 writes ``ethos.ethics``; 4.5.3 wrote ``ethos.ethic``."""
+    country = {
+        "ethos": {"ethics": ["ethic_pacifist", "ethic_fanatic_materialist"]},
+        "government": {
+            "authority": "auth_democratic",
+            "civics": ["civic_technocracy"],
+            "origin": "origin_default",
+        },
+    }
+
+    identity = IdentityExtractor(country).get_empire_identity()
+
+    assert identity["ethics"] == ["pacifist", "fanatic_materialist"]
+    assert identity["origin"] == "default"
+
+
+def test_empire_identity_still_reads_the_older_singular_ethic():
+    country = {
+        "ethos": {"ethic": ["ethic_xenophile"]},
+        "government": {"authority": "auth_democratic", "civics": []},
+    }
+
+    assert IdentityExtractor(country).get_empire_identity()["ethics"] == ["xenophile"]
+
+
+class EthicsMapExtractor(SaveExtractorBase):
+    """Minimal test double for the country-wide ethics map."""
+
+    def __init__(self, countries):
+        self._countries = countries
+        self._country_ethics = None
+
+    def _get_countries_cached(self):
+        return self._countries
+
+
+def test_country_ethics_map_reads_both_key_spellings():
+    countries = {
+        "0": {"ethos": {"ethics": ["ethic_pacifist"]}},
+        "1": {"ethos": {"ethic": ["ethic_xenophobe"]}},
+    }
+
+    assert EthicsMapExtractor(countries)._get_country_ethics_map() == {
+        0: ["pacifist"],
+        1: ["xenophobe"],
+    }
