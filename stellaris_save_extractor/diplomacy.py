@@ -911,7 +911,10 @@ class DiplomacyMixin:
             # Extract ethics
             ethos_data = country.get("ethos")
             if isinstance(ethos_data, dict):
-                ethic = ethos_data.get("ethic")
+                # Stellaris 4.5.4 writes the list as "ethics"; earlier versions used "ethic".
+                ethic = ethos_data.get("ethics")
+                if ethic is None:
+                    ethic = ethos_data.get("ethic")
                 if isinstance(ethic, list):
                     # Multiple ethics - prefer fanatic
                     for e in ethic:

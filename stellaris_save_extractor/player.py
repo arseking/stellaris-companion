@@ -543,7 +543,10 @@ class PlayerMixin:
         # Extract ethics
         ethos = country.get("ethos", {})
         if isinstance(ethos, dict):
-            ethic = ethos.get("ethic", [])
+            # Stellaris 4.5.4 writes the list as "ethics"; earlier versions used "ethic".
+            ethic = ethos.get("ethics")
+            if ethic is None:
+                ethic = ethos.get("ethic", [])
             if isinstance(ethic, str):
                 ethic = [ethic]
             result["ethics"] = [e.replace("ethic_", "") for e in ethic if isinstance(e, str)]

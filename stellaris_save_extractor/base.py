@@ -699,7 +699,10 @@ class SaveExtractorBase:
             if not isinstance(ethos, dict):
                 continue
 
-            ethic = ethos.get("ethic", [])
+            # Stellaris 4.5.4 writes the list as "ethics"; earlier versions used "ethic".
+            ethic = ethos.get("ethics")
+            if ethic is None:
+                ethic = ethos.get("ethic", [])
             if isinstance(ethic, str):
                 ethic = [ethic]
             if isinstance(ethic, list):
